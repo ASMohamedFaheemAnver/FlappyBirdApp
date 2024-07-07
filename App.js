@@ -1,6 +1,13 @@
-import { Canvas, Group, Image, useImage } from "@shopify/react-native-skia";
-import { useEffect } from "react";
-import { useWindowDimensions } from "react-native";
+import {
+  Canvas,
+  Group,
+  Image,
+  Text,
+  matchFont,
+  useImage,
+} from "@shopify/react-native-skia";
+import { useEffect, useState } from "react";
+import { Platform, useWindowDimensions } from "react-native";
 import {
   useSharedValue,
   withTiming,
@@ -11,6 +18,8 @@ import {
   useDerivedValue,
   interpolate,
   Extrapolation,
+  useAnimatedReaction,
+  runOnJS,
 } from "react-native-reanimated";
 import {
   GestureHandlerRootView,
@@ -28,13 +37,15 @@ const App = () => {
   const pipeBottom = useImage(require("./assets/sprites/pipe-green.png"));
   const pipeTop = useImage(require("./assets/sprites/pipe-green-top.png"));
   const base = useImage(require("./assets/sprites/base.png"));
-
   const birdWidth = 64;
   const birdHeight = 48;
+  const [score, setScore] = useState(0);
 
   const pipeOffset = 0;
   const x = useSharedValue(width - 50);
   const birdY = useSharedValue(height / 3);
+  // If we need to move it we can in the future
+  const birdPositionX = useSharedValue(width / 4);
   const birdYVelocity = useSharedValue(0);
 
   useFrameCallback(({ timeSincePreviousFrame: dt }) => {
@@ -54,6 +65,32 @@ const App = () => {
       -1 // Means infinity
     );
   }, []);
+
+  // Runs on ui thread
+  useAnimatedReaction(
+    () => {
+      return x.value;
+    },
+    (currentValue, previousValue) => {
+      const middle = birdPositionX.value;
+      if (
+        currentValue !== previousValue &&
+        currentValue <= middle &&
+        (previousValue || 0) > middle
+      ) {
+        // Runs on JS thread
+        // setScore((previousScore) => previousScore++);
+        runOnJS(setScore)(score + 1);
+      }
+    }
+  );
+  const fontFamily = Platform.select({ ios: "Helvetica", default: "serif" });
+  const fontStyle = {
+    fontFamily,
+    fontSize: 40,
+    fontWeight: "bold",
+  };
+  const font = matchFont(fontStyle);
 
   const gesture = Gesture.Tap().onStart(() => {
     birdYVelocity.value = JUMP_FORCE;
@@ -119,12 +156,14 @@ const App = () => {
           >
             <Image
               image={bird}
-              x={width / 4}
+              x={birdPositionX}
               y={birdY}
               width={birdWidth}
               height={birdHeight}
             />
           </Group>
+          {/* Score */}
+          <Text x={25} y={75} text={score.toString()} font={font} />
         </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>
