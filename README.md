@@ -1,0 +1,1 @@
+This project demonstrates how to effectively utilize the JavaScript (JS) and UI threads in a React Native application? [Article about threads](https://medium.com/@codersauthority/react-native-threads-and-how-they-communicate-with-each-other-72d521fe8738),
